@@ -47,62 +47,11 @@ sub variables {
 sub parse {
     my ($self, $template) = @_;
 
-    my @segments = grep { defined && length } split /(\{.+?\})/, $template;
-    for my $segment (@segments) {
-        next unless $segment =~ /^\{(.+?)\}$/;
-        $segment = $self->parse_expansion($1);
-    }
+    my @segments =
+        map { URI::Template::Restrict::Expansion->parse($_) }
+        grep { defined && length } split /(\{.+?\})/, $template;
 
     $self->segments([@segments]);
-}
-
-# ----------------------------------------------------------------------
-# Draft 03 - 4.1. Variables
-# ----------------------------------------------------------------------
-# * Some variables may be supplied with default values.
-# * The default value must comde from ( unreserved / pct-encoded ).
-# ----------------------------------------------------------------------
-# Draft 03 - 4.2. Template Expansions
-# ----------------------------------------------------------------------
-#   op         = 1*ALPHA
-#   arg        = *(reserved / unreserved / pct-encoded)
-#   var        = varname [ "=" vardefault ]
-#   vars       = var [ *("," var) ]
-#   varname    = (ALPHA / DIGIT)*(ALPHA / DIGIT / "." / "_" / "-" )
-#   vardefault = *(unreserved / pct-encoded)
-#   operator   = "-" op "|" arg "|" vars
-#   expansion  = "{" ( var / operator ) "}"
-# ----------------------------------------------------------------------
-# RFC 3986 - Characters
-# ----------------------------------------------------------------------
-#   pct-encoded = "%" HEXDIG HEXDIG
-#   unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
-#   reserved    = gen-delims / sub-delims
-#   gen-delims  = ":" / "/" / "?" / "#" / "[" / "]" / "@"
-#   sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
-#               / "*" / "+" / "," / ";" / "="
-# ----------------------------------------------------------------------
-sub parse_expansion {
-    my ($self, $expansion) = @_;
-
-    my ($op, $arg, $vars) = ('fill', undef, $expansion);
-    if ($vars =~ /\|/) {
-        ($op, $arg, $vars) = split /\|/, $vars, 3;
-    }
-    $op =~ s/^\-//;
-
-    my @vars;
-    for my $var (split /,/, $vars) {
-        my ($name, $default) = split /=/, $var;
-        $default = '' unless defined $default;
-        push @vars, { name => $name, value => $default };
-    }
-
-    return URI::Template::Restrict::Expansion->new(
-        op   => $op,
-        arg  => $arg,
-        vars => \@vars,
-    );
 }
 
 sub process {
@@ -110,12 +59,6 @@ sub process {
     return URI->new($self->process_to_string(@_));
 }
 
-# ----------------------------------------------------------------------
-# Draft 03 - 1.2. Design Considerations
-# ----------------------------------------------------------------------
-# * The reserved characters in a URI Template can only appear in the
-#   non-expansion text, or in the argument to an operator.
-# * Given the percent-encoding rules for variable values.
 # ----------------------------------------------------------------------
 # Draft 03 - 4.4. URI Template Substitution
 # ----------------------------------------------------------------------
@@ -131,12 +74,13 @@ sub process_to_string {
     my $vars = dclone(reftype $_[0] eq 'HASH' ? $_[0] : { @_ });
     for my $value (values %$vars) {
         next if ref $value and reftype $value ne 'ARRAY';
+
+        # TODO: check ( unreserved / pct-encoded )
         $_ = uri_escape_utf8(NFKC(defined $_ ? $_ : ''))
             for (ref $value ? @$value : $value);
     }
 
-    my $uri = join '', map { blessed $_ ? $_->expand($vars) : $_ } $self->segments;
-    return $uri;
+    return join '', map { blessed $_ ? $_->expand($vars) : $_ } $self->segments;
 }
 
 sub deparse {

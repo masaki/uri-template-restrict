@@ -4,75 +4,145 @@ use Moose;
 use Scalar::Util qw(reftype);
 use namespace::clean -except => ['meta'];
 
-has 'op'   => ( is => 'rw', isa => 'Str', default => 'fill', lazy => 1 );
-has 'arg'  => ( is => 'rw', isa => 'Maybe[Str]' );
-has 'vars' => ( is => 'rw', isa => 'ArrayRef', default => sub { [] }, lazy => 1 );
+has 'op'   => ( is => 'rw', isa => 'Str', predicate => 'has_op' );
+has 'arg'  => ( is => 'rw', isa => 'Str', predicate => 'has_arg' );
+has 'vars' => ( is => 'rw', isa => 'ArrayRef' );
+has 'code' => ( is => 'rw', isa => 'CodeRef' );
 
-sub expandable {
-    my $self = shift;
-    return $self->can('op_' . $self->op);
+{
+    my $fill = sub {
+        my ($self, $vars) = @_;
+        my ($name, $default) = %{ $self->vars->[0] };
+        $default = '' unless defined $default;
+        return exists $vars->{$name} ? $vars->{$name} : $default;
+    };
+
+    my $code = {
+        prefix => sub {
+            my ($self, $vars) = @_;
+
+            my $name = [ %{ $self->vars->[0] } ]->[0];
+            return '' unless exists  $vars->{$name};
+            return '' unless defined $vars->{$name};
+
+            my $args = $vars->{$name};
+            unless (reftype $args eq 'ARRAY') {
+                $args = [ $args ];
+            }
+
+            my $prefix = $self->has_arg ? $self->arg : '';
+            return join '', map { $prefix . $_ } @$args;
+        },
+        suffix => sub {
+            my ($self, $vars) = @_;
+
+            my $name = [ %{ $self->vars->[0] } ]->[0];
+            return '' unless exists  $vars->{$name};
+            return '' unless defined $vars->{$name};
+
+            my $args = $vars->{$name};
+            unless (reftype $args eq 'ARRAY') {
+                $args = [ $args ];
+            }
+
+            my $suffix = $self->has_arg ? $self->arg : '';
+            return join '', map { $_ . $suffix } @$args;
+        },
+        join => sub {
+            my ($self, $vars) = @_;
+
+            my @pairs;
+            for my $name (map { [ %$_ ]->[0] } @{ $self->vars }) {
+                next unless exists $vars->{$name};
+                push @pairs, join '=', $name, $vars->{$name};
+            }
+
+            return join $self->has_arg ? $self->arg : '', @pairs;
+        },
+        list => sub {
+            my ($self, $vars) = @_;
+
+            my $name = [ %{ $self->vars->[0] } ]->[0];
+            return '' unless exists  $vars->{$name};
+
+            my $args = $vars->{$name};
+            return '' unless reftype $args eq 'ARRAY' and @$args > 0;
+            return join $self->has_arg ? $self->arg : '', @$args;
+        },
+    };
+
+    sub to_code {
+        my ($class, $op) = @_;
+        return defined $op ? $code->{$op} : $fill;
+    }
 }
+
+# ----------------------------------------------------------------------
+# Draft 03 - 4.2. Template Expansions
+# ----------------------------------------------------------------------
+#   op         = 1*ALPHA
+#   arg        = *(reserved / unreserved / pct-encoded)
+#   var        = varname [ "=" vardefault ]
+#   vars       = var [ *("," var) ]
+#   varname    = (ALPHA / DIGIT)*(ALPHA / DIGIT / "." / "_" / "-" )
+#   vardefault = *(unreserved / pct-encoded)
+#   operator   = "-" op "|" arg "|" vars
+#   expansion  = "{" ( var / operator ) "}"
+# ----------------------------------------------------------------------
+# RFC 3986 - 2. Characters
+# ----------------------------------------------------------------------
+#   pct-encoded = "%" HEXDIG HEXDIG
+#   unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
+#   reserved    = gen-delims / sub-delims
+#   gen-delims  = ":" / "/" / "?" / "#" / "[" / "]" / "@"
+#   sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
+#               / "*" / "+" / "," / ";" / "="
+# ----------------------------------------------------------------------
+sub parse {
+    my $class = shift;
+
+    local $_ = shift;
+    return $_ unless tr/{}//d == 2;
+
+    # varname [ "=" vardefault ]
+    my $re = '[a-zA-Z0-9][a-zA-Z0-9._\-]*' .
+             '(?:=(?:[a-zA-Z0-9\-._~]|(?:%[a-fA-F0-9]{2}))*)?';
+
+    my ($op, $arg, $vars);
+    if (/^$re$/) {
+        # var ( = varname [ "=" vardefault ] )
+        $vars = $_;
+    }
+    # (?:[:\/?#\[\]\@!\$&'()*+,;=a-zA-Z0-9\-._~]|(?:%[a-fA-F0-9]{2}))*?
+    elsif (/^ - ([a-zA-Z]+) \| (.*?) \| ($re (?:,$re)*) $/x) {
+        # operator ( = "-" op "|" arg "|" var [ *("," var) ] )
+        ($op, $arg, $vars) = ($1, $2, $3);
+    }
+
+    # no vars
+    confess "unparsable expansion: $_" unless defined $vars;
+    # no op
+    confess "unknown expansion operator: $op in {$_}"
+        unless my $code = $class->to_code($op);
+
+    my @vars;
+    for my $var (split /,/, $vars) {
+        my ($name, $default) = split /=/, $var;
+        $default = '' unless defined $default;
+        push @vars, { $name, $default };
+    }
+
+    my $self = $class->new(vars => \@vars, code => $code);
+    $self->op($op)   if defined $op;
+    $self->arg($arg) if defined $arg;
+
+    return $self;
+}
+
 
 sub expand {
     my ($self, $vars) = @_;
-    my $op = 'op_' . $self->op;
-    return $self->$op($vars);
-}
-
-sub op_fill {
-    my ($self, $vars) = @_;
-
-    my ($name, $default) = @{ $self->vars->[0] }{qw(name value)};
-    $default = '' unless defined $default;
-
-    return exists $vars->{$name} ? $vars->{$name} : $default;
-}
-
-sub op_prefix {
-    my ($self, $vars) = @_;
-
-    my $name   = $self->vars->[0]->{name};
-    my $prefix = $self->arg;
-
-    return '' unless exists $vars->{$name};
-    return '' unless defined $vars->{$name};
-    return join '', map { $prefix . $_ }
-        reftype $vars->{$name} eq 'ARRAY' ? @{ $vars->{$name} } : ( $vars->{$name} );
-}
-
-sub op_suffix {
-    my ($self, $vars) = @_;
-
-    my $name   = $self->vars->[0]->{name};
-    my $suffix = $self->arg;
-
-    return '' unless exists $vars->{$name};
-    return '' unless defined $vars->{$name};
-    return join '', map { $_ . $suffix }
-        reftype $vars->{$name} eq 'ARRAY' ? @{ $vars->{$name} } : ( $vars->{$name} );
-}
-
-sub op_join {
-    my ($self, $vars) = @_;
-
-    my @pairs;
-    for my $name (map { $_->{name} } @{ $self->vars }) {
-        next unless exists $vars->{$name};
-        push @pairs, join '=', $name, $vars->{$name};
-    }
-
-    return join $self->arg, @pairs;
-}
-
-sub op_list {
-    my ($self, $vars) = @_;
-
-    my $name = $self->vars->[0]->{name};
-
-    return '' unless exists $vars->{$name};
-    return '' unless reftype $vars->{$name} eq 'ARRAY';
-    return '' unless @{ $vars->{$name} } > 0;
-    return join $self->arg, @{ $vars->{$name} };
+    return $self->code->($self, $vars);
 }
 
 no Moose; __PACKAGE__->meta->make_immutable;
