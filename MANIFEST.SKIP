@@ -16,3 +16,4 @@
 \.shipit
 \._
 \.DS_Store
+^rfc/
