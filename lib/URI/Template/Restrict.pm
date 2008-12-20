@@ -41,7 +41,7 @@ sub expansions {
 
 sub variables {
     my $self = shift;
-    return sort uniq map { keys %{ $_->{vars} } } $self->expansions;
+    return uniq sort map { keys %$_ } map { @{$_->{vars}} } $self->expansions;
 }
 
 sub parse {
@@ -71,7 +71,7 @@ sub process {
 sub process_to_string {
     my $self = shift;
 
-    my $vars = dclone(reftype $_[0] eq 'HASH' ? $_[0] : { @_ });
+    my $vars = dclone((defined $_[0] and reftype $_[0] eq 'HASH') ? $_[0] : { @_ });
     for my $value (values %$vars) {
         next if ref $value and reftype $value ne 'ARRAY';
 
