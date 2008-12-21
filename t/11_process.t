@@ -67,3 +67,22 @@ __END__
 --- input: http://example.com{-prefix|/|foo}
 --- params: { foo => [] }
 --- expected: http://example.com
+
+=== simple suffix
+--- input: http://example.com/{-suffix|/|foo}
+--- params: { foo => 'x' }
+--- expected: http://example.com/x/
+
+=== empty suffix
+--- input: http://example.com/{-suffix|/|foo}
+--- expected: http://example.com/
+
+=== array suffix
+--- input: http://example.com/{-suffix|/|foo}
+--- params: { foo => [qw(x y)] }
+--- expected: http://example.com/x/y/
+
+=== empty array suffix
+--- input: http://example.com/{-suffix|/|foo}
+--- params: { foo => [] }
+--- expected: http://example.com/
