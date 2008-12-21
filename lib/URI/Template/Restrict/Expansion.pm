@@ -25,8 +25,8 @@ has 'code' => ( is => 'rw', isa => 'CodeRef' );
             return '' unless exists  $vars->{$name};
             return '' unless defined $vars->{$name};
 
-            my $args = $vars->{$name};
-            unless (reftype $args eq 'ARRAY') {
+            my $args = exists $vars->{$name} ? $vars->{$name} : [];
+            unless (ref $args and reftype $args eq 'ARRAY') {
                 $args = [ $args ];
             }
 
@@ -40,8 +40,8 @@ has 'code' => ( is => 'rw', isa => 'CodeRef' );
             return '' unless exists  $vars->{$name};
             return '' unless defined $vars->{$name};
 
-            my $args = $vars->{$name};
-            unless (reftype $args eq 'ARRAY') {
+            my $args = exists $vars->{$name} ? $vars->{$name} : [];
+            unless (ref $args and reftype $args eq 'ARRAY') {
                 $args = [ $args ];
             }
 

@@ -13,7 +13,7 @@ run {
 
     my $str = $template->process_to_string(defined $params ? $params : ());
     is $str => $block->expected, "process_to_string: $name";
-    ok !ref $str;
+    ok !ref $str, "is not reference";
 
     my $uri = $template->process($params ? $params : ());
     is $uri => $block->expected, "process: $name";
@@ -44,3 +44,26 @@ __END__
 --- input: http://example.com/{foo}/{foo}
 --- params: { foo => 'x' }
 --- expected: http://example.com/x/x
+
+=== default value
+--- input: http://example.com/{foo=x}/{bar=y}
+--- expected: http://example.com/x/y
+
+=== simple prefix
+--- input: http://example.com{-prefix|/|foo}
+--- params: { foo => 'x' }
+--- expected: http://example.com/x
+
+=== empty prefix
+--- input: http://example.com{-prefix|/|foo}
+--- expected: http://example.com
+
+=== array prefix
+--- input: http://example.com{-prefix|/|foo}
+--- params: { foo => [qw(x y)] }
+--- expected: http://example.com/x/y
+
+=== empty array prefix
+--- input: http://example.com{-prefix|/|foo}
+--- params: { foo => [] }
+--- expected: http://example.com
