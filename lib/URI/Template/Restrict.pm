@@ -77,7 +77,28 @@ sub process_to_string {
 }
 
 sub deparse {
-    # TODO: implementation
+    my ($self, $uri) = @_;
+
+    my $re = '';
+    for ($self->segments) {
+        if (blessed $_) {
+            $re .= '(' . $_->re . ')';
+        }
+        else {
+            $re .= quotemeta $_;
+        }
+    }
+
+    return unless my @match = $uri =~ /$re/;
+    return unless @match == $self->expansions;
+
+    my %vars;
+    for ($self->expansions) {
+        my %var = $_->deparse(shift @match);
+        %vars = (%vars, %var);
+    }
+
+    return %vars;
 }
 
 no Mouse; __PACKAGE__->meta->make_immutable; 1;
