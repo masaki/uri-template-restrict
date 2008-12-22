@@ -7,7 +7,7 @@ filters { vars => ['eval'] };
 
 run {
     my $block    = shift;
-    my $template = URI::Template::Restrict->new($block->input);
+    my $template = URI::Template::Restrict->new(template => $block->input);
 
     my @vars = sort $template->variables;
     is_deeply \@vars => $block->vars, $block->name;

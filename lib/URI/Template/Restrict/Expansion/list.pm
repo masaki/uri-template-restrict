@@ -1,7 +1,7 @@
 package # hide from PAUSE
     URI::Template::Restrict::Expansion::list;
 
-use Moose;
+use Mouse;
 
 with 'URI::Template::Restrict::Expansion';
 
@@ -14,4 +14,4 @@ sub expand {
     return join $self->has_arg ? $self->arg : '', @$args;
 }
 
-no Moose; __PACKAGE__->meta->make_immutable;
+no Mouse; __PACKAGE__->meta->make_immutable; 1;

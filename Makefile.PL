@@ -2,11 +2,11 @@ use inc::Module::Install;
 name 'URI-Template-Restrict';
 all_from 'lib/URI/Template/Restrict.pm';
 
-requires 'Moose' => 0.63;
+requires 'Mouse' => 0.14;
+requires 'Scalar::Util';
 requires 'namespace::clean';
 requires 'overload';
 requires 'List::MoreUtils';
-requires 'Scalar::Util';
 requires 'Storable';
 requires 'Unicode::Normalize';
 requires 'URI';

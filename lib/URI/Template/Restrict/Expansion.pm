@@ -1,10 +1,10 @@
 package URI::Template::Restrict::Expansion;
 
-use Moose::Role;
+use Mouse::Role;
 
 has 'op'   => ( is => 'rw', isa => 'Str', predicate => 'has_op' );
 has 'arg'  => ( is => 'rw', isa => 'Str', predicate => 'has_arg' );
-has 'vars' => ( is => 'rw', isa => 'ArrayRef[HashRef]' );
+has 'vars' => ( is => 'rw', isa => 'ArrayRef' );
 
 requires 'expand';
 
@@ -60,7 +60,7 @@ sub parse {
     }
 
     my $impl = join '::', __PACKAGE__, lc(defined $op ? $op : '__subst__');
-    Class::MOP::load_class($impl) or
+    Mouse::load_class($impl) or
         confess "unknown expansion operator: $op in $_";
 
     return $impl->new(
@@ -70,4 +70,4 @@ sub parse {
     );
 }
 
-no Moose::Role; 1;
+no Mouse::Role; 1;

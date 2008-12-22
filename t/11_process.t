@@ -8,7 +8,7 @@ filters { params => ['eval'] };
 run {
     my $block    = shift;
     my $name     = $block->name;
-    my $template = URI::Template::Restrict->new($block->input);
+    my $template = URI::Template::Restrict->new(template => $block->input);
     my $params   = $block->params;
 
     my $str = $template->process_to_string(defined $params ? $params : ());

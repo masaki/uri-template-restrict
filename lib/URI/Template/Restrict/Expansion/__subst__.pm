@@ -1,7 +1,7 @@
 package # hide from PAUSE
     URI::Template::Restrict::Expansion::__subst__;
 
-use Moose;
+use Mouse;
 
 with 'URI::Template::Restrict::Expansion';
 
@@ -12,4 +12,4 @@ sub expand {
     return defined $vars->{$name} ? $vars->{$name} : $default;
 }
 
-no Moose; __PACKAGE__->meta->make_immutable;
+no Mouse; __PACKAGE__->meta->make_immutable; 1;

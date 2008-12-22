@@ -1,10 +1,9 @@
 package URI::Template::Restrict;
 
 use 5.8.1;
-use Moose;
+use Mouse;
 use overload '""' => \&template, fallback => 1;
 use List::MoreUtils qw(uniq);
-use Scalar::Util qw(reftype);
 use Storable qw(dclone);
 use Unicode::Normalize qw(NFKC);
 use URI;
@@ -13,12 +12,6 @@ use URI::Template::Restrict::Expansion;
 use namespace::clean -except => ['meta'];
 
 our $VERSION = '0.01';
-
-around 'new' => sub {
-    my ($orig, $self, @args) = @_;
-    unshift @args, 'template' if @args == 1; # compat
-    $orig->($self, @args);
-};
 
 has 'template' => (
     is      => 'rw',
@@ -71,9 +64,9 @@ sub process {
 sub process_to_string {
     my $self = shift;
 
-    my $vars = dclone((defined $_[0] and reftype $_[0] eq 'HASH') ? $_[0] : { @_ });
+    my $vars = dclone((ref $_[0] and ref $_[0] eq 'HASH') ? $_[0] : { @_ });
     for my $value (values %$vars) {
-        next if ref $value and reftype $value ne 'ARRAY';
+        next if ref $value and ref $value ne 'ARRAY';
 
         # TODO: check ( unreserved / pct-encoded )
         $_ = uri_escape_utf8(NFKC(defined $_ ? $_ : ''))
@@ -87,7 +80,7 @@ sub deparse {
     # TODO: implementation
 }
 
-no Moose; __PACKAGE__->meta->make_immutable;
+no Mouse; __PACKAGE__->meta->make_immutable; 1;
 
 =head1 NAME
 

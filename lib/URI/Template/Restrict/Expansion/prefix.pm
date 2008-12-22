@@ -1,7 +1,7 @@
 package # hide from PAUSE
     URI::Template::Restrict::Expansion::prefix;
 
-use Moose;
+use Mouse;
 
 with 'URI::Template::Restrict::Expansion';
 
@@ -16,4 +16,4 @@ sub expand {
     return join '', map { $prefix . $_ } @$args;
 }
 
-no Moose; __PACKAGE__->meta->make_immutable;
+no Mouse; __PACKAGE__->meta->make_immutable; 1;

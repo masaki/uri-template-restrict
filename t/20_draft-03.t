@@ -19,7 +19,7 @@ my $vars = {
 
 run {
     my $block = shift;
-    my $template = URI::Template::Restrict->new($block->input);
+    my $template = URI::Template::Restrict->new(template => $block->input);
     is $template->process($vars) => $block->expected, $block->input;
 };
 
