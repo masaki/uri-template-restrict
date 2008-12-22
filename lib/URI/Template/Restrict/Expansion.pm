@@ -1,34 +1,27 @@
 package URI::Template::Restrict::Expansion;
 
 use Moose;
-use Scalar::Util qw(reftype);
-use namespace::clean -except => ['meta'];
 
 has 'op'   => ( is => 'rw', isa => 'Str', predicate => 'has_op' );
 has 'arg'  => ( is => 'rw', isa => 'Str', predicate => 'has_arg' );
-has 'vars' => ( is => 'rw', isa => 'ArrayRef' );
+has 'vars' => ( is => 'rw', isa => 'ArrayRef[HashRef]' );
 has 'code' => ( is => 'rw', isa => 'CodeRef' );
 
 {
     my $fill = sub {
         my ($self, $vars) = @_;
-        my ($name, $default) = %{ $self->vars->[0] };
+        my ($name, $default) = @{ $self->vars->[0] }{qw(name default)};
         $default = '' unless defined $default;
-        return exists $vars->{$name} ? $vars->{$name} : $default;
+        return defined $vars->{$name} ? $vars->{$name} : $default;
     };
 
     my $code = {
         prefix => sub {
             my ($self, $vars) = @_;
 
-            my $name = [ %{ $self->vars->[0] } ]->[0];
-            return '' unless exists  $vars->{$name};
-            return '' unless defined $vars->{$name};
-
-            my $args = exists $vars->{$name} ? $vars->{$name} : [];
-            unless (ref $args and reftype $args eq 'ARRAY') {
-                $args = [ $args ];
-            }
+            my $name = $self->vars->[0]->{name};
+            return '' unless defined(my $args = $vars->{$name});
+            $args = [ $args ] unless ref $args;
 
             my $prefix = $self->has_arg ? $self->arg : '';
             return join '', map { $prefix . $_ } @$args;
@@ -36,14 +29,9 @@ has 'code' => ( is => 'rw', isa => 'CodeRef' );
         suffix => sub {
             my ($self, $vars) = @_;
 
-            my $name = [ %{ $self->vars->[0] } ]->[0];
-            return '' unless exists  $vars->{$name};
-            return '' unless defined $vars->{$name};
-
-            my $args = exists $vars->{$name} ? $vars->{$name} : [];
-            unless (ref $args and reftype $args eq 'ARRAY') {
-                $args = [ $args ];
-            }
+            my $name = $self->vars->[0]->{name};
+            return '' unless defined(my $args = $vars->{$name});
+            $args = [ $args ] unless ref $args;
 
             my $suffix = $self->has_arg ? $self->arg : '';
             return join '', map { $_ . $suffix } @$args;
@@ -52,9 +40,11 @@ has 'code' => ( is => 'rw', isa => 'CodeRef' );
             my ($self, $vars) = @_;
 
             my @pairs;
-            for my $name (map { [ %$_ ]->[0] } @{ $self->vars }) {
-                next unless exists $vars->{$name};
-                push @pairs, join '=', $name, $vars->{$name};
+            for my $var (@{ $self->vars }) {
+                my ($name, $default) = @{$var}{qw(name default)};
+                my $value = exists $vars->{$name} ? $vars->{$name} : $default;
+                next unless defined $value;
+                push @pairs, join '=', $name, $value;
             }
 
             return join $self->has_arg ? $self->arg : '', @pairs;
@@ -62,11 +52,9 @@ has 'code' => ( is => 'rw', isa => 'CodeRef' );
         list => sub {
             my ($self, $vars) = @_;
 
-            my $name = [ %{ $self->vars->[0] } ]->[0];
-            return '' unless exists  $vars->{$name};
-
-            my $args = $vars->{$name};
-            return '' unless reftype $args eq 'ARRAY' and @$args > 0;
+            my $name = $self->vars->[0]->{name};
+            return '' unless defined(my $args = $vars->{$name});
+            return '' unless ref $args eq 'ARRAY' and @$args > 0;
             return join $self->has_arg ? $self->arg : '', @$args;
         },
     };
@@ -128,8 +116,7 @@ sub parse {
     my @vars;
     for my $var (split /,/, $vars) {
         my ($name, $default) = split /=/, $var;
-        $default = '' unless defined $default;
-        push @vars, { $name, $default };
+        push @vars, { name => $name, default => $default };
     }
 
     my $self = $class->new(vars => \@vars, code => $code);

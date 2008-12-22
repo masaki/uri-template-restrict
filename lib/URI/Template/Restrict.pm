@@ -41,7 +41,8 @@ sub expansions {
 
 sub variables {
     my $self = shift;
-    return uniq sort map { keys %$_ } map { @{$_->{vars}} } $self->expansions;
+    #return uniq sort map { keys %$_ } map { @{$_->{vars}} } $self->expansions;
+    return uniq sort map { $_->{name} } map { @{ $_->{vars} } } $self->expansions;
 }
 
 sub parse {

@@ -86,3 +86,41 @@ __END__
 --- input: http://example.com/{-suffix|/|foo}
 --- params: { foo => [] }
 --- expected: http://example.com/
+
+=== single join
+--- input: http://example.com/?{-join|&|foo}
+--- params: { foo => 'x' }
+--- expected: http://example.com/?foo=x
+
+=== multiple join
+--- input: http://example.com/?{-join|&|foo,bar,baz,quux}
+--- params: { foo => 'x', bar => 'y', baz => '' }
+--- expected: http://example.com/?foo=x&bar=y&baz=
+
+=== undefined join
+--- input: http://example.com/?{-join|&|quux}
+--- expected: http://example.com/?
+
+=== single list
+--- input: http://example.com/{-list|/|foo}
+--- params: { foo => ['y'] }
+--- expected: http://example.com/y
+
+=== multiple list
+--- input: http://example.com/{-list|/|foo}
+--- params: { foo => [qw(x y z)] }
+--- expected: http://example.com/x/y/z
+
+=== empty value list
+--- input: http://example.com/{-list|/|foo}
+--- params: { foo => ['x', '', 'z'] }
+--- expected: http://example.com/x//z
+
+=== empty array list
+--- input: http://example.com/{-list|/|foo}
+--- params: { foo => [] }
+--- expected: http://example.com/
+
+=== undefined list
+--- input: http://example.com/{-list|/|foo}
+--- expected: http://example.com/
