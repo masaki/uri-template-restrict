@@ -41,7 +41,6 @@ sub expansions {
 
 sub variables {
     my $self = shift;
-    #return uniq sort map { keys %$_ } map { @{$_->{vars}} } $self->expansions;
     return uniq sort map { $_->{name} } map { @{ $_->{vars} } } $self->expansions;
 }
 
@@ -49,7 +48,7 @@ sub parse {
     my ($self, $template) = @_;
 
     my @segments =
-        map { URI::Template::Restrict::Expansion->parse($_) }
+        map { URI::Template::Restrict::Expansion->parse($_) || $_ }
         grep { defined && length } split /(\{.+?\})/, $template;
 
     $self->segments([@segments]);
