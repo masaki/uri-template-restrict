@@ -69,3 +69,38 @@ __END__
 --- input: http://example.com/{-suffix|/|foo}
 --- expected: { foo => [qw(x y)] }
 --- uri: http://example.com/x/y/
+
+=== single join
+--- input: http://example.com/?{-join|&|foo}
+--- expected: { foo => 'x' }
+--- uri: http://example.com/?foo=x
+
+=== multiple join
+--- input: http://example.com/?{-join|&|foo,bar,baz,quux}
+--- expected: { foo => 'x', bar => 'y', baz => '', quux => undef }
+--- uri: http://example.com/?foo=x&bar=y&baz=
+
+=== undefined join
+--- input: http://example.com/?{-join|&|quux}
+--- expected: { quux => undef }
+--- uri: http://example.com/?
+
+=== single list
+--- input: http://example.com/{-list|/|foo}
+--- expected: { foo => ['y'] }
+--- uri: http://example.com/y
+
+=== multiple list
+--- input: http://example.com/{-list|/|foo}
+--- expected: { foo => [qw(x y z)] }
+--- uri: http://example.com/x/y/z
+
+=== empty value list
+--- input: http://example.com/{-list|/|foo}
+--- expected: { foo => ['x', '', 'z'] }
+--- uri: http://example.com/x//z
+
+=== empty array list
+--- input: http://example.com/{-list|/|foo}
+--- expected: { foo => undef }
+--- uri: http://example.com/
