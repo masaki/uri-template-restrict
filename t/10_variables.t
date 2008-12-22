@@ -1,4 +1,5 @@
 use Test::Base;
+use Test::Deep;
 use URI::Template::Restrict;
 
 plan tests => 1 * blocks;
@@ -10,7 +11,7 @@ run {
     my $template = URI::Template::Restrict->new(template => $block->input);
 
     my @vars = sort $template->variables;
-    is_deeply \@vars => $block->vars, $block->name;
+    cmp_deeply \@vars => $block->vars, $block->name;
 };
 
 __END__
