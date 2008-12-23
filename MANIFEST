@@ -71,7 +71,7 @@ README
 t/00_compile.t
 t/10_variables.t
 t/11_process.t
-t/12_deparse.t
+t/12_extract.t
 t/20_draft-03.t
 xt/01_pod.t
 xt/02_podcoverage.t

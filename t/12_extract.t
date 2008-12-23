@@ -10,7 +10,7 @@ run {
     my $block    = shift;
     my $template = URI::Template::Restrict->new(template => $block->input);
 
-    my %deparse = $template->deparse($block->uri);
+    my %deparse = $template->extract($block->uri);
     cmp_deeply \%deparse => $block->expected, $block->name;
 };
 
