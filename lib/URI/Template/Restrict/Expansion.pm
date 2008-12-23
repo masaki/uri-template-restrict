@@ -2,11 +2,11 @@ package URI::Template::Restrict::Expansion;
 
 use Mouse::Role;
 
-has 'op'   => ( is => 'rw', isa => 'Str', predicate => 'has_op' );
+has 'op'   => ( is => 'rw', isa => 'Str' );
 has 'arg'  => ( is => 'rw', isa => 'Str', predicate => 'has_arg' );
 has 'vars' => ( is => 'rw', isa => 'ArrayRef', auto_deref => 1 );
 
-requires 'expand';
+requires 'process', 'extract';
 
 # ----------------------------------------------------------------------
 # Draft 03 - 4.2. Template Expansions
@@ -71,3 +71,38 @@ sub parse {
 }
 
 no Mouse::Role; 1;
+
+=head1 NAME
+
+URI::Template::Restrict::Expansion - Template expansions
+
+=head1 METHODS
+
+=head2 process
+
+=head2 extract
+
+=head1 PROPERTIES
+
+=head2 op
+
+=head2 arg
+
+=head2 vars
+
+=head2 re
+
+=head1 AUTHOR
+
+NAKAGAWA Masaki E<lt>masaki@cpan.orgE<gt>
+
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=head1 SEE ALSO
+
+L<URI::Template::Restrict>
+
+=cut

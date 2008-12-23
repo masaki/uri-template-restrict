@@ -7,7 +7,7 @@ use namespace::clean -except => ['meta'];
 
 with 'URI::Template::Restrict::Expansion';
 
-sub expand {
+sub process {
     my ($self, $vars) = @_;
 
     my $name = $self->vars->[0]->{name};
@@ -24,7 +24,7 @@ sub re {
     return "(?:${var}*(?:${arg}${var}*)*)*";
 }
 
-sub deparse {
+sub extract {
     my ($self, $var) = @_;
 
     my $arg = $self->arg;

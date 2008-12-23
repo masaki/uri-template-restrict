@@ -2,17 +2,17 @@ use inc::Module::Install;
 name 'URI-Template-Restrict';
 all_from 'lib/URI/Template/Restrict.pm';
 
-requires 'Mouse' => 0.14;
-requires 'Scalar::Util';
+requires 'Mouse' => '0.14';
 requires 'namespace::clean';
 requires 'List::MoreUtils';
+requires 'Regexp::Assemble';
 requires 'Unicode::Normalize';
 requires 'URI';
 requires 'URI::Escape';
 
 tests 't/*.t';
 test_requires 'Test::More';
-test_requires 'Test::use::ok';
+test_requires 'ok';
 test_requires 'Test::Deep';
 author_tests 'xt';
 use_test_base;

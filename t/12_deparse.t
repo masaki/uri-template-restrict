@@ -11,7 +11,6 @@ run {
     my $template = URI::Template::Restrict->new(template => $block->input);
 
     my %deparse = $template->deparse($block->uri);
-    #is_deeply \%deparse => $block->expected, $block->name;
     cmp_deeply \%deparse => $block->expected, $block->name;
 };
 

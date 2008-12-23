@@ -73,10 +73,10 @@ sub process_to_string {
             for (ref $value ? @$value : $value);
     }
 
-    return join '', map { blessed $_ ? $_->expand($vars) : $_ } $self->segments;
+    return join '', map { blessed $_ ? $_->process($vars) : $_ } $self->segments;
 }
 
-sub deparse {
+sub extract {
     my ($self, $uri) = @_;
 
     my $re = '';
@@ -94,7 +94,7 @@ sub deparse {
 
     my %vars;
     for ($self->expansions) {
-        my %var = $_->deparse(shift @match);
+        my %var = $_->extract(shift @match);
         %vars = (%vars, %var);
     }
 
@@ -105,15 +105,61 @@ no Mouse; __PACKAGE__->meta->make_immutable; 1;
 
 =head1 NAME
 
-URI::Template::Restrict
+URI::Template::Restrict - restricted URI Templates handler
 
 =head1 SYNOPSIS
 
     use URI::Template::Restrict;
 
+    my $template = URI::Template->new(template => 'http://example.com/{foo}');
+
+    my $uri = $template->process(foo => 'y');
+    # $uri: "http://example.com/y"
+
+    my %result = $template->extract($uri);
+    # %result: (foo => 'y')
+
 =head1 DESCRIPTION
 
-URI::Template::Restrict is
+This is a restricted URI Templates handler. URI Templates is described at
+L<http://bitworking.org/projects/URI-Templates/>.
+
+This module supports B<draft-gregorio-uritemplate-03> except B<-opt> and
+B<-neg> operators.
+
+=head1 METHODS
+
+=head2 new(template => $template)
+
+=head2 process(%vars)
+
+Given a hash of key-value pairs. It will URI escape the values,
+substitute them in to the template, and return a L<URI> object.
+
+=head2 process_to_string(%vars)
+
+Processes input like the process method, but doesn't inflate the
+result to a L<URI> object.
+
+=head2 extract($uri)
+
+Extracts variables from an uri based on the current template.
+Returns a hash with the extracted values.
+
+=head1 PROPERTIES
+
+=head2 template
+
+Returns the original template string.
+
+=head2 variables
+
+Returns a list of unique variable names found in the template.
+
+=head2 expansions
+
+Returns a list of L<URI::Template::Restrict::Expansion> objects found
+in the template.
 
 =head1 AUTHOR
 
