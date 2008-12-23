@@ -11,6 +11,7 @@ run {
     my $template = URI::Template::Restrict->new(template => $block->input);
 
     my %deparse = $template->deparse($block->uri);
+    #is_deeply \%deparse => $block->expected, $block->name;
     cmp_deeply \%deparse => $block->expected, $block->name;
 };
 
@@ -52,8 +53,18 @@ __END__
 
 === array prefix
 --- input: http://example.com{-prefix|/|foo}
---- expected: { foo => [qw(x y)] }
---- uri: http://example.com/x/y
+--- expected: { foo => [qw(x y z)] }
+--- uri: http://example.com/x/y/z
+
+=== array, omitted prefix
+--- input: http://example.com{-prefix|/|foo}
+--- expected: { foo => ['', 'y', 'z'] }
+--- uri: http://example.com//y/z
+
+=== escaped prefix
+--- input: http://example.com{-prefix|/|foo}
+--- expected: { foo => [' ', '@'] }
+--- uri: http://example.com/%20/%40
 
 === simple suffix
 --- input: http://example.com/{-suffix|/|foo}
@@ -70,6 +81,16 @@ __END__
 --- expected: { foo => [qw(x y)] }
 --- uri: http://example.com/x/y/
 
+=== array, omitted suffix
+--- input: http://example.com/{-suffix|/|foo}
+--- expected: { foo => ['', 'y', 'z'] }
+--- uri: http://example.com//y/z/
+
+=== escaped suffix
+--- input: http://example.com/{-suffix|/|foo}
+--- expected: { foo => [' ', '@'] }
+--- uri: http://example.com/%20/%40/
+
 === single join
 --- input: http://example.com/?{-join|&|foo}
 --- expected: { foo => 'x' }
@@ -79,6 +100,21 @@ __END__
 --- input: http://example.com/?{-join|&|foo,bar,baz,quux}
 --- expected: { foo => 'x', bar => 'y', baz => '', quux => undef }
 --- uri: http://example.com/?foo=x&bar=y&baz=
+
+=== single escaped join
+--- input: http://example.com/?{-join|&|foo}
+--- expected: { foo => '@' }
+--- uri: http://example.com/?foo=%40
+
+=== multiple escaped join
+--- input: http://example.com/?{-join|&|foo,bar,baz,quux}
+--- expected: { foo => ' ', bar => '@', baz => '', quux => undef }
+--- uri: http://example.com/?foo=%20&bar=%40&baz=
+
+=== multiple, omitted join
+--- input: http://example.com/?{-join|&|foo,bar,baz,quux}
+--- expected: { foo => undef, bar => '', baz => 'z', quux => undef }
+--- uri: http://example.com/?bar=&baz=z
 
 === undefined join
 --- input: http://example.com/?{-join|&|quux}
@@ -95,10 +131,25 @@ __END__
 --- expected: { foo => [qw(x y z)] }
 --- uri: http://example.com/x/y/z
 
+=== single escaped list
+--- input: http://example.com/{-list|/|foo}
+--- expected: { foo => ['@'] }
+--- uri: http://example.com/%40
+
+=== multiple escaped list
+--- input: http://example.com/{-list|/|foo}
+--- expected: { foo => [' ', '@'] }
+--- uri: http://example.com/%20/%40
+
 === empty value list
 --- input: http://example.com/{-list|/|foo}
 --- expected: { foo => ['x', '', 'z'] }
 --- uri: http://example.com/x//z
+
+=== empty value list
+--- input: http://example.com/{-list|/|foo}
+--- expected: { foo => ['', 'y', 'z'] }
+--- uri: http://example.com//y/z
 
 === empty array list
 --- input: http://example.com/{-list|/|foo}

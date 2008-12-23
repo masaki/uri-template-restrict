@@ -4,7 +4,7 @@ use Mouse::Role;
 
 has 'op'   => ( is => 'rw', isa => 'Str', predicate => 'has_op' );
 has 'arg'  => ( is => 'rw', isa => 'Str', predicate => 'has_arg' );
-has 'vars' => ( is => 'rw', isa => 'ArrayRef' );
+has 'vars' => ( is => 'rw', isa => 'ArrayRef', auto_deref => 1 );
 
 requires 'expand';
 
