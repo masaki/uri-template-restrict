@@ -111,7 +111,9 @@ URI::Template::Restrict - restricted URI Templates handler
 
     use URI::Template::Restrict;
 
-    my $template = URI::Template->new(template => 'http://example.com/{foo}');
+    my $template = URI::Template::Restrict->new(
+        template => 'http://example.com/{foo}'
+    );
 
     my $uri = $template->process(foo => 'y');
     # $uri: "http://example.com/y"
