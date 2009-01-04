@@ -73,6 +73,8 @@ t/10_variables.t
 t/11_process.t
 t/12_extract.t
 t/20_draft-03.t
+tools/module_memory.pl
+tools/module_memory.sh
 xt/01_pod.t
 xt/02_podcoverage.t
 xt/03_podspell.t
