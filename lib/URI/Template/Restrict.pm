@@ -11,7 +11,7 @@ use URI::Escape qw(uri_escape_utf8);
 use URI::Template::Restrict::Expansion;
 use namespace::clean -except => ['meta'];
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 has 'template' => (
     is      => 'rw',

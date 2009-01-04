@@ -1,4 +1,8 @@
 Revision history for Perl extension URI::Template::Restrict
 
+0.02
+        - no functional changes, no need to upgrade
+        - fix POD (thanks to Tomohiro Teranishi)
+
 0.01
         - original version
