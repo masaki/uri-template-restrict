@@ -33,18 +33,20 @@ sub parse {
     my $class = shift;
 
     local $_ = shift;
-    return unless tr/{}/{}/ == 2;
+    #return unless tr/{}/{}/ == 2;
 
     # varname [ "=" vardefault ]
     my $re = '[a-zA-Z0-9][a-zA-Z0-9._\-]*' .
              '(?:=(?:[a-zA-Z0-9\-._~]|(?:%[a-fA-F0-9]{2}))*)?';
 
     my ($op, $arg, $vars);
-    if (/^\{ ($re) \}$/x) {
+#    if (/^\{ ($re) \}$/x) {
+    if (/^($re)$/) {
         # var ( = varname [ "=" vardefault ] )
         $vars = $1;
     }
-    elsif (/^\{ - ([a-zA-Z]+) \| (.*?) \| ($re (?:,$re)*) \}$/x) {
+#    elsif (/^\{ - ([a-zA-Z]+) \| (.*?) \| ($re (?:,$re)*) \}$/x) {
+    elsif (/^ - ([a-zA-Z]+) \| (.*?) \| ($re (?:,$re)*) $/x) {
         # regex: (?:[:\/?#\[\]\@!\$&'()*+,;=a-zA-Z0-9\-._~]|(?:%[a-fA-F0-9]{2}))*?
         # operator ( = "-" op "|" arg "|" var [ *("," var) ] )
         ($op, $arg, $vars) = ($1, $2, $3);
@@ -60,6 +62,7 @@ sub parse {
     }
 
     my $impl = join '::', __PACKAGE__, lc(defined $op ? $op : '__subst__');
+    require Mouse;
     Mouse::load_class($impl) or
         confess "unknown expansion operator: $op in $_";
 

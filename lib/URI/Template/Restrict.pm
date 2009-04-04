@@ -1,9 +1,9 @@
 package URI::Template::Restrict;
 
 use 5.008_001;
-use Mouse;
 use overload '""' => \&template, fallback => 1;
 use List::MoreUtils qw(uniq);
+use Scalar::Util qw(blessed);
 use Storable qw(dclone);
 use Unicode::Normalize qw(NFKC);
 use URI;
@@ -12,43 +12,45 @@ use URI::Template::Restrict::Expansion;
 
 our $VERSION = '0.02';
 
-has 'template' => (
-    is      => 'rw',
-    isa     => 'Str',
-    trigger => sub { shift->parse(@_) },
-);
+sub new {
+    my ($class, @args) = @_;
+    my $args = $class->BUILDARGS(@args);
+    my $self = bless $args, $class;
+    $self->BUILD($args);
+    $self;
+}
 
-has 'segments' => (
-    is         => 'rw',
-    isa        => 'ArrayRef',
-    default    => sub { [] },
-    lazy       => 1,
-    auto_deref => 1,
-);
+sub BUILDARGS {
+    my ($class, $template) = @_;
+    return +{
+        template => $template,
+        segments => [],
+    };
+}
+
+sub BUILD {
+    my ($self, $args) = @_;
+
+    $self->{segments} = [
+        map {
+            /^\{(.+?)\}$/
+                ? URI::Template::Restrict::Expansion->parse($1)
+                : $_
+        }
+        grep { defined && length }
+        split /(\{.+?\})/, $args->{template}
+    ];
+}
+
+sub template {    $_[0]->{template}   }
+sub segments { @{ $_[0]->{segments} } }
 
 sub expansions {
-    my $self = shift;
-    return grep { blessed $_ } $self->segments;
+    return grep { ref $_ } $_[0]->segments;
 }
 
 sub variables {
-    my $self = shift;
-    return uniq sort map { $_->{name} } map { $_->vars } $self->expansions;
-}
-
-sub parse {
-    my ($self, $template) = @_;
-
-    my @segments =
-        map { URI::Template::Restrict::Expansion->parse($_) || $_ }
-        grep { defined && length } split /(\{.+?\})/, $template;
-
-    $self->segments([@segments]);
-}
-
-sub process {
-    my $self = shift;
-    return URI->new($self->process_to_string(@_));
+    return uniq sort map { $_->{name} } map { $_->vars } $_[0]->expansions;
 }
 
 # ----------------------------------------------------------------------
@@ -60,6 +62,11 @@ sub process {
 #   every octet of the UTF-8 string that falls outside of ( unreserved )
 #   MUST be percent-encoded.
 # ----------------------------------------------------------------------
+sub process {
+    my $self = shift;
+    return URI->new($self->process_to_string(@_));
+}
+
 sub process_to_string {
     my $self = shift;
 
@@ -100,7 +107,7 @@ sub extract {
     return %vars;
 }
 
-no Mouse; __PACKAGE__->meta->make_immutable; 1;
+1;
 
 =head1 NAME
 

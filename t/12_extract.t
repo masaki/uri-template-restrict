@@ -8,7 +8,7 @@ filters { expected => ['eval'] };
 
 run {
     my $block    = shift;
-    my $template = URI::Template::Restrict->new(template => $block->input);
+    my $template = URI::Template::Restrict->new($block->input);
 
     my %deparse = $template->extract($block->uri);
     cmp_deeply \%deparse => $block->expected, $block->name;
