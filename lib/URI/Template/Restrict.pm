@@ -1,6 +1,6 @@
 package URI::Template::Restrict;
 
-use 5.8.1;
+use 5.008_001;
 use Mouse;
 use overload '""' => \&template, fallback => 1;
 use List::MoreUtils qw(uniq);
@@ -9,7 +9,6 @@ use Unicode::Normalize qw(NFKC);
 use URI;
 use URI::Escape qw(uri_escape_utf8);
 use URI::Template::Restrict::Expansion;
-use namespace::clean -except => ['meta'];
 
 our $VERSION = '0.02';
 
