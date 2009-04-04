@@ -17,5 +17,6 @@ test_requires 'Test::Deep';
 author_tests 'xt';
 use_test_base;
 
+auto_set_repository;
 auto_include_deps;
 WriteAll;
