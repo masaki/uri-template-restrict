@@ -29,26 +29,26 @@ requires 'process', 'extract';
 #   sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
 #               / "*" / "+" / "," / ";" / "="
 # ----------------------------------------------------------------------
+my %RE = (
+    op         => '[a-zA-Z]+',
+    arg        => '.*?',
+    varname    => '[a-zA-Z0-9][a-zA-Z0-9._\-]*',
+    vardefault => '(?:[a-zA-Z0-9\-._~]|(?:%[a-fA-F0-9]{2}))*',
+);
+$RE{var}  = $RE{varname}.'(?:='.$RE{vardefault}.')?';
+$RE{vars} = $RE{var}.'(?:,'.$RE{var}.')*';
+
 sub parse {
-    my $class = shift;
-
-    local $_ = shift;
-    #return unless tr/{}/{}/ == 2;
-
-    # varname [ "=" vardefault ]
-    my $re = '[a-zA-Z0-9][a-zA-Z0-9._\-]*' .
-             '(?:=(?:[a-zA-Z0-9\-._~]|(?:%[a-fA-F0-9]{2}))*)?';
+    my ($class, $expansion) = @_;
 
     my ($op, $arg, $vars);
-#    if (/^\{ ($re) \}$/x) {
-    if (/^($re)$/) {
-        # var ( = varname [ "=" vardefault ] )
+
+    # var = varname [ "=" vardefault ]
+    if ($expansion =~ /^($RE{var})$/) {
         $vars = $1;
     }
-#    elsif (/^\{ - ([a-zA-Z]+) \| (.*?) \| ($re (?:,$re)*) \}$/x) {
-    elsif (/^ - ([a-zA-Z]+) \| (.*?) \| ($re (?:,$re)*) $/x) {
-        # regex: (?:[:\/?#\[\]\@!\$&'()*+,;=a-zA-Z0-9\-._~]|(?:%[a-fA-F0-9]{2}))*?
-        # operator ( = "-" op "|" arg "|" var [ *("," var) ] )
+    # operator = "-" op "|" arg "|" vars
+    elsif ($expansion =~ /^\-($RE{op})\|($RE{arg})\|($RE{vars})$/) {
         ($op, $arg, $vars) = ($1, $2, $3);
     }
 
