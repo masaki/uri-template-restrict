@@ -31,15 +31,14 @@ sub BUILDARGS {
 sub BUILD {
     my ($self, $args) = @_;
 
-    $self->{segments} = [
+    push @{ $self->{segments} },
         map {
             /^\{(.+?)\}$/
                 ? URI::Template::Restrict::Expansion->parse($1)
                 : $_
         }
         grep { defined && length }
-        split /(\{.+?\})/, $args->{template}
-    ];
+        split /(\{.+?\})/, $args->{template};
 }
 
 sub template {    $_[0]->{template}   }
