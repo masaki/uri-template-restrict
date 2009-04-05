@@ -11,7 +11,7 @@ use URI;
 use URI::Escape qw(uri_escape_utf8);
 use URI::Template::Restrict::Expansion;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 __PACKAGE__->mk_ro_accessors(qw'template segments');
 

@@ -1,5 +1,8 @@
 Revision history for Perl extension URI::Template::Restrict
 
+0.03
+        - removed Mouse
+
 0.02
         - no functional changes, no need to upgrade
         - fix POD (thanks to Tomohiro Teranishi)
