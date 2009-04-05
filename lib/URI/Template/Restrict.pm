@@ -36,7 +36,13 @@ sub expansions {
 }
 
 sub variables {
-    return uniq sort map { $_->name } map { @{ $_->vars } } $_[0]->expansions;
+    return
+        uniq
+        sort
+        map { $_->name }
+        map { ref $_ eq 'ARRAY' ? @$_ : $_ }
+        map { $_->vars }
+        $_[0]->expansions;
 }
 
 # ----------------------------------------------------------------------

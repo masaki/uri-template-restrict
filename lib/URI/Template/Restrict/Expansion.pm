@@ -3,7 +3,7 @@ package URI::Template::Restrict::Expansion;
 use strict;
 use warnings;
 use base 'Class::Accessor::Fast';
-use Carp ();
+use Carp qw(croak);
 use URI::Escape qw(uri_unescape);
 
 __PACKAGE__->mk_ro_accessors(qw'op arg vars');
@@ -61,7 +61,8 @@ sub new {
     }
 
     # no vars
-    Carp::croak("unparsable expansion: $expansion") unless defined $vars;
+    croak "unparsable expansion: $expansion"
+        unless defined $op and defined $vars;
 
     my @vars = split /,/, $vars;
     for my $var (@vars) {
@@ -73,7 +74,11 @@ sub new {
         });
     }
 
-    my $self = { op => $op, arg => $arg, vars => [@vars] };
+    my $self = {
+        op   => $op,
+        arg  => $arg,
+        vars => @vars == 1 ? $vars[0] : \@vars,
+    };
     return $class->SUPER::new($self);
 }
 
@@ -94,7 +99,7 @@ sub new {
     join   => sub {
         my $self = shift;
         my $arg  = quotemeta $self->arg;
-        my @vars = @{ $self->vars };
+        my @vars = ref $self->vars eq 'ARRAY' ? @{ $self->vars } : ($self->vars);
         my @pattern;
         for my $pair (@vars) {
             my $varname = $pair->name;
@@ -119,35 +124,36 @@ sub pattern {
 %PROCESSOR = (
     fill   => sub {
         my ($self, $vars) = @_;
-        my $var   = $self->vars->[0];
+        my $var   = $self->vars;
         my $name  = $var->name;
         my $value = defined $var->default ? $var->default : '';
         return defined $vars->{$name} ? $vars->{$name} : $value;
     },
     prefix => sub {
         my ($self, $vars) = @_;
-        my $args = $vars->{$self->vars->[0]->name};
+        my $args = $vars->{$self->vars->name};
         return '' unless defined $args;
         my $arg = defined $self->arg ? $self->arg : '';
         return join '', map { "${arg}${_}" } ref $args ? @$args : ($args);
     },
     suffix => sub {
         my ($self, $vars) = @_;
-        my $args = $vars->{$self->vars->[0]->name};
+        my $args = $vars->{$self->vars->name};
         return '' unless defined $args;
         my $arg = defined $self->arg ? $self->arg : '';
         return join '', map { "${_}${arg}" } ref $args ? @$args : ($args);
     },
     list   => sub {
         my ($self, $vars) = @_;
-        my $args = $vars->{$self->vars->[0]->name};
+        my $args = $vars->{$self->vars->name};
         return '' unless defined $args and ref $args eq 'ARRAY' and @$args > 0;
         return join defined $self->arg ? $self->arg : '', @$args;
     },
     join   => sub {
         my ($self, $vars) = @_;
+        my @vars = ref $self->vars eq 'ARRAY' ? @{ $self->vars } : ($self->vars);
         my @pairs;
-        for my $var (@{ $self->vars }) {
+        for my $var (@vars) {
             my $name  = $var->name;
             my $value = exists $vars->{$name} ? $vars->{$name} : $var->default;
             next unless defined $value;
@@ -167,31 +173,33 @@ sub process {
     fill   => sub {
         my ($self, $var) = @_;
         my $value = $var eq '' ? undef : uri_unescape($var);
-        return ($self->vars->[0]->name, $value);
+        return ($self->vars->name, $value);
     },
     prefix => sub {
         my ($self, $var) = @_;
         my $arg = $self->arg;
         $var =~ s/^$arg//;
         my @vars = map { uri_unescape($_) } split /$arg/, $var;
-        return ($self->vars->[0]->name, @vars > 1 ? \@vars : @vars ? $vars[0] : undef);
+        return ($self->vars->name, @vars > 1 ? \@vars : @vars ? $vars[0] : undef);
     },
     suffix => sub {
         my ($self, $var) = @_;
         my $arg = $self->arg;
         $var =~ s/$arg$//;
         my @vars = map { uri_unescape($_) } split /$arg/, $var;
-        return ($self->vars->[0]->name, @vars > 1 ? \@vars : @vars ? $vars[0] : undef);
+        return ($self->vars->name, @vars > 1 ? \@vars : @vars ? $vars[0] : undef);
     },
     list   => sub {
         my ($self, $var) = @_;
         my $arg = $self->arg;
         my @vars = map { uri_unescape($_) } split /$arg/, $var;
-        return ($self->vars->[0]->name, @vars > 0 ? \@vars : undef);
+        return ($self->vars->name, @vars > 0 ? \@vars : undef);
     },
     join   => sub {
         my ($self, $var) = @_;
-        my %vars = map { ($_->name, $_->default) } @{ $self->vars };
+        my %vars =
+            map { ($_->name, $_->default) }
+            ref $self->vars eq 'ARRAY' ? @{ $self->vars } : ($self->vars);
         my $arg = $self->arg;
         for my $pair (split /$arg/, $var) {
             my ($name, $value) = split /=/, $pair;
