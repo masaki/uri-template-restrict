@@ -6,8 +6,6 @@ use warnings;
 use base 'Class::Accessor::Fast';
 use overload '""' => \&template, fallback => 1;
 use List::MoreUtils qw(uniq);
-use Scalar::Util qw(blessed);
-use Storable qw(dclone);
 use Unicode::Normalize qw(NFKC);
 use URI;
 use URI::Escape qw(uri_escape_utf8);
@@ -57,14 +55,15 @@ sub process {
 
 sub process_to_string {
     my $self = shift;
+    my $args = ref $_[0] ? shift : { @_ };
+    my $vars = {};
 
-    my $vars = dclone((ref $_[0] and ref $_[0] eq 'HASH') ? $_[0] : { @_ });
-    for my $value (values %$vars) {
+    for my $key (keys %$args) {
+        my $value = $args->{$key};
         next if ref $value and ref $value ne 'ARRAY';
-
-        # TODO: check ( unreserved / pct-encoded )
-        $_ = uri_escape_utf8(NFKC(defined $_ ? $_ : ''))
-            for (ref $value ? @$value : $value);
+        $vars->{$key} = ref $value
+            ? [ map { uri_escape_utf8(NFKC($_)) } @$value ]
+            : uri_escape_utf8(NFKC($value));
     }
 
     return join '', map { ref $_ ? $_->process($vars) : $_ } @{ $self->segments };
@@ -75,15 +74,18 @@ sub extract {
 
     my $re = join '', map { ref $_ ? '('.$_->pattern.')' : quotemeta $_ } @{ $self->segments };
     my @match = $uri =~ /$re/;
-    return unless @match and @match == $self->expansions;
 
-    my %vars;
-    for ($self->expansions) {
-        my %var = $_->extract(shift @match);
-        %vars = (%vars, %var);
+    my @expansions = $self->expansions;
+    return unless @match and @match == @expansions;
+
+    my @vars;
+    while (@match > 0) {
+        my $match = shift @match;
+        my $expansion = shift @expansions;
+        push @vars, $expansion->extract($match);
     }
 
-    return %vars;
+    return %{{ @vars }};
 }
 
 1;
@@ -116,7 +118,9 @@ B<-neg> operators.
 
 =head1 METHODS
 
-=head2 new(template => $template)
+=head2 new($template)
+
+Creates a new instance with the template.
 
 =head2 process(%vars)
 

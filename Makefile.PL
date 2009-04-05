@@ -2,10 +2,8 @@ use inc::Module::Install;
 name 'URI-Template-Restrict';
 all_from 'lib/URI/Template/Restrict.pm';
 
-requires 'Mouse' => '0.14';
-requires 'namespace::clean';
+requires 'Class::Accessor::Fast';
 requires 'List::MoreUtils';
-requires 'Regexp::Assemble';
 requires 'Unicode::Normalize';
 requires 'URI';
 requires 'URI::Escape';
