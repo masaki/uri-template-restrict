@@ -1,6 +1,9 @@
 package URI::Template::Restrict;
 
 use 5.008_001;
+use strict;
+use warnings;
+use base 'Class::Accessor::Fast';
 use overload '""' => \&template, fallback => 1;
 use List::MoreUtils qw(uniq);
 use Scalar::Util qw(blessed);
@@ -12,44 +15,30 @@ use URI::Template::Restrict::Expansion;
 
 our $VERSION = '0.02';
 
+__PACKAGE__->mk_ro_accessors(qw'template segments');
+
 sub new {
-    my ($class, @args) = @_;
-    my $args = $class->BUILDARGS(@args);
-    my $self = bless $args, $class;
-    $self->BUILD($args);
-    $self;
-}
-
-sub BUILDARGS {
     my ($class, $template) = @_;
-    return +{
-        template => $template,
-        segments => [],
-    };
-}
 
-sub BUILD {
-    my ($self, $args) = @_;
-
-    push @{ $self->{segments} },
+    my @segments =
         map {
             /^\{(.+?)\}$/
-                ? URI::Template::Restrict::Expansion->parse($1)
+                ? URI::Template::Restrict::Expansion->new($1)
                 : $_
         }
         grep { defined && length }
-        split /(\{.+?\})/, $args->{template};
+        split /(\{.+?\})/, $template;
+
+    my $self = { template => $template, segments => [@segments] };
+    return $class->SUPER::new($self);
 }
 
-sub template {    $_[0]->{template}   }
-sub segments { @{ $_[0]->{segments} } }
-
 sub expansions {
-    return grep { ref $_ } $_[0]->segments;
+    return grep { ref $_ } @{ $_[0]->segments };
 }
 
 sub variables {
-    return uniq sort map { $_->{name} } map { $_->vars } $_[0]->expansions;
+    return uniq sort map { $_->name } map { @{ $_->vars } } $_[0]->expansions;
 }
 
 # ----------------------------------------------------------------------
@@ -78,24 +67,15 @@ sub process_to_string {
             for (ref $value ? @$value : $value);
     }
 
-    return join '', map { blessed $_ ? $_->process($vars) : $_ } $self->segments;
+    return join '', map { ref $_ ? $_->process($vars) : $_ } @{ $self->segments };
 }
 
 sub extract {
     my ($self, $uri) = @_;
 
-    my $re = '';
-    for ($self->segments) {
-        if (blessed $_) {
-            $re .= '(' . $_->re . ')';
-        }
-        else {
-            $re .= quotemeta $_;
-        }
-    }
-
-    return unless my @match = $uri =~ /$re/;
-    return unless @match == $self->expansions;
+    my $re = join '', map { ref $_ ? '('.$_->pattern.')' : quotemeta $_ } @{ $self->segments };
+    my @match = $uri =~ /$re/;
+    return unless @match and @match == $self->expansions;
 
     my %vars;
     for ($self->expansions) {

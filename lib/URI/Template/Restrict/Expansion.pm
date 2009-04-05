@@ -1,12 +1,21 @@
 package URI::Template::Restrict::Expansion;
 
-use Mouse::Role;
+use strict;
+use warnings;
+use base 'Class::Accessor::Fast';
+use Carp ();
+use URI::Escape qw(uri_unescape);
 
-has 'op'   => ( is => 'rw', isa => 'Str' );
-has 'arg'  => ( is => 'rw', isa => 'Str', predicate => 'has_arg' );
-has 'vars' => ( is => 'rw', isa => 'ArrayRef', auto_deref => 1 );
+__PACKAGE__->mk_ro_accessors(qw'op arg vars');
 
-requires 'process', 'extract';
+{
+    package # hide from PAUSE
+        URI::Template::Restrict::Expansion::var;
+    use base 'Class::Accessor::Fast';
+    __PACKAGE__->mk_ro_accessors(qw'name default');
+}
+
+my (%RE, %PATTERN, %PROCESSOR, %EXTRACTOR);
 
 # ----------------------------------------------------------------------
 # Draft 03 - 4.2. Template Expansions
@@ -29,51 +38,176 @@ requires 'process', 'extract';
 #   sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
 #               / "*" / "+" / "," / ";" / "="
 # ----------------------------------------------------------------------
-my %RE = (
-    op         => '[a-zA-Z]+',
-    arg        => '.*?',
-    varname    => '[a-zA-Z0-9][a-zA-Z0-9._\-]*',
-    vardefault => '(?:[a-zA-Z0-9\-._~]|(?:%[a-fA-F0-9]{2}))*',
-);
-$RE{var}  = $RE{varname}.'(?:='.$RE{vardefault}.')?';
-$RE{vars} = $RE{var}.'(?:,'.$RE{var}.')*';
+{
+    $RE{op}         = '[a-zA-Z]+';
+    $RE{arg}        = '.*?';
+    $RE{varname}    = '[a-zA-Z0-9][a-zA-Z0-9._\-]*';
+    $RE{vardefault} = '(?:[a-zA-Z0-9\-._~]|(?:%[a-fA-F0-9]{2}))*';
+    $RE{var}        = "$RE{varname}(?:=$RE{vardefault})?";
+    $RE{vars}       = "$RE{var}(?:,$RE{var})*";
+}
 
-sub parse {
+sub new {
     my ($class, $expansion) = @_;
-
     my ($op, $arg, $vars);
 
-    # var = varname [ "=" vardefault ]
     if ($expansion =~ /^($RE{var})$/) {
-        $vars = $1;
+        # var = varname [ "=" vardefault ]
+        ($op, $vars) = ('fill', $1);
     }
-    # operator = "-" op "|" arg "|" vars
     elsif ($expansion =~ /^\-($RE{op})\|($RE{arg})\|($RE{vars})$/) {
+        # operator = "-" op "|" arg "|" vars
         ($op, $arg, $vars) = ($1, $2, $3);
     }
 
     # no vars
-    confess "unparsable expansion: $_" unless defined $vars;
+    Carp::croak("unparsable expansion: $expansion") unless defined $vars;
 
-    my @vars;
-    for my $var (split /,/, $vars) {
+    my @vars = split /,/, $vars;
+    for my $var (@vars) {
         my ($name, $default) = split /=/, $var;
-        push @vars, { name => $name, default => $default };
+        # replace var
+        $var = URI::Template::Restrict::Expansion::var->new({
+            name    => $name,
+            default => $default
+        });
     }
 
-    my $impl = join '::', __PACKAGE__, lc(defined $op ? $op : '__subst__');
-    require Mouse;
-    Mouse::load_class($impl) or
-        confess "unknown expansion operator: $op in $_";
-
-    return $impl->new(
-        vars => \@vars,
-        defined $op  ? (op  => $op)  : (),
-        defined $arg ? (arg => $arg) : (),
-    );
+    my $self = { op => $op, arg => $arg, vars => [@vars] };
+    return $class->SUPER::new($self);
 }
 
-no Mouse::Role; 1;
+%PATTERN = (
+    fill   => $RE{vardefault},
+    prefix => sub {
+        my $arg = quotemeta shift->arg;
+        return "(?:${arg}$RE{vardefault})*";
+    },
+    suffix => sub {
+        my $arg = quotemeta shift->arg;
+        return "(?:$RE{vardefault}${arg})*";
+    },
+    list   => sub {
+        my $arg = quotemeta shift->arg;
+        return "(?:$RE{vardefault}(?:${arg}$RE{vardefault})*)*";
+    },
+    join   => sub {
+        my $self = shift;
+        my $arg  = quotemeta $self->arg;
+        my @vars = @{ $self->vars };
+        my @pattern;
+        for my $pair (@vars) {
+            my $varname = $pair->name;
+            my $pattern = "${varname}=$RE{vardefault}";
+            for my $rest (@vars) {
+                my $name = $rest->name;
+                next if $name eq $varname;
+                $pattern .= "(?:${arg}${name}=$RE{vardefault})?";
+            }
+            push @pattern, $pattern;
+        }
+        return '(?:' . join('|', @pattern) . ')*';
+    },
+);
+
+sub pattern {
+    my $self = shift;
+    my $pattern = $PATTERN{$self->op};
+    return ref $pattern ? $pattern->($self) : $pattern;
+}
+
+%PROCESSOR = (
+    fill   => sub {
+        my ($self, $vars) = @_;
+        my $var   = $self->vars->[0];
+        my $name  = $var->name;
+        my $value = defined $var->default ? $var->default : '';
+        return defined $vars->{$name} ? $vars->{$name} : $value;
+    },
+    prefix => sub {
+        my ($self, $vars) = @_;
+        my $args = $vars->{$self->vars->[0]->name};
+        return '' unless defined $args;
+        my $arg = defined $self->arg ? $self->arg : '';
+        return join '', map { "${arg}${_}" } ref $args ? @$args : ($args);
+    },
+    suffix => sub {
+        my ($self, $vars) = @_;
+        my $args = $vars->{$self->vars->[0]->name};
+        return '' unless defined $args;
+        my $arg = defined $self->arg ? $self->arg : '';
+        return join '', map { "${_}${arg}" } ref $args ? @$args : ($args);
+    },
+    list   => sub {
+        my ($self, $vars) = @_;
+        my $args = $vars->{$self->vars->[0]->name};
+        return '' unless defined $args and ref $args eq 'ARRAY' and @$args > 0;
+        return join defined $self->arg ? $self->arg : '', @$args;
+    },
+    join   => sub {
+        my ($self, $vars) = @_;
+        my @pairs;
+        for my $var (@{ $self->vars }) {
+            my $name  = $var->name;
+            my $value = exists $vars->{$name} ? $vars->{$name} : $var->default;
+            next unless defined $value;
+            push @pairs, "${name}=${value}";
+        }
+        return join defined $self->arg ? $self->arg : '', @pairs;
+    },
+);
+
+sub process {
+    my ($self, $vars) = @_;
+    my $processor = $PROCESSOR{$self->op};
+    return $processor->($self, $vars);
+}
+
+%EXTRACTOR = (
+    fill   => sub {
+        my ($self, $var) = @_;
+        my $value = $var eq '' ? undef : uri_unescape($var);
+        return ($self->vars->[0]->name, $value);
+    },
+    prefix => sub {
+        my ($self, $var) = @_;
+        my $arg = $self->arg;
+        $var =~ s/^$arg//;
+        my @vars = map { uri_unescape($_) } split /$arg/, $var;
+        return ($self->vars->[0]->name, @vars > 1 ? \@vars : @vars ? $vars[0] : undef);
+    },
+    suffix => sub {
+        my ($self, $var) = @_;
+        my $arg = $self->arg;
+        $var =~ s/$arg$//;
+        my @vars = map { uri_unescape($_) } split /$arg/, $var;
+        return ($self->vars->[0]->name, @vars > 1 ? \@vars : @vars ? $vars[0] : undef);
+    },
+    list   => sub {
+        my ($self, $var) = @_;
+        my $arg = $self->arg;
+        my @vars = map { uri_unescape($_) } split /$arg/, $var;
+        return ($self->vars->[0]->name, @vars > 0 ? \@vars : undef);
+    },
+    join   => sub {
+        my ($self, $var) = @_;
+        my %vars = map { ($_->name, $_->default) } @{ $self->vars };
+        my $arg = $self->arg;
+        for my $pair (split /$arg/, $var) {
+            my ($name, $value) = split /=/, $pair;
+            $vars{$name} = uri_unescape($value);
+        }
+        return %vars;
+    },
+);
+
+sub extract {
+    my ($self, $var) = @_;
+    my $extractor = $EXTRACTOR{$self->op};
+    return $extractor->($self, $var);
+}
+
+1;
 
 =head1 NAME
 
@@ -93,7 +227,7 @@ URI::Template::Restrict::Expansion - Template expansions
 
 =head2 vars
 
-=head2 re
+=head2 pattern
 
 =head1 AUTHOR
 
