@@ -79,7 +79,7 @@ sub new {
         arg  => $arg,
         vars => @vars == 1 ? $vars[0] : \@vars,
     };
-    return $class->SUPER::new($self);
+    return bless $self, $class;
 }
 
 %PATTERN = (

@@ -28,7 +28,7 @@ sub new {
         split /(\{.+?\})/, $template;
 
     my $self = { template => $template, segments => [@segments] };
-    return $class->SUPER::new($self);
+    return bless $self, $class;
 }
 
 sub expansions {
