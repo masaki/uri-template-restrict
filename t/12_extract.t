@@ -25,6 +25,11 @@ __END__
 --- expected: { foo => ' ', bar => '@' }
 --- uri: http://example.com/%20/%40
 
+=== unescaped
+--- input: http://example.com/{foo}/{bar}
+--- expected: { foo => '$', bar => '@' }
+--- uri: http://example.com/%24/%40
+
 === no value
 --- input: http://example.com/{foo}/{bar}
 --- expected: { foo => 'x', bar => undef }
@@ -65,6 +70,11 @@ __END__
 --- expected: { foo => [' ', '@'] }
 --- uri: http://example.com/%20/%40
 
+=== unescaped prefix
+--- input: http://example.com{-prefix|/|foo}
+--- expected: { foo => ['$', '@'] }
+--- uri: http://example.com/%24/%40
+
 === simple suffix
 --- input: http://example.com/{-suffix|/|foo}
 --- expected: { foo => 'x' }
@@ -90,6 +100,11 @@ __END__
 --- expected: { foo => [' ', '@'] }
 --- uri: http://example.com/%20/%40/
 
+=== escaped suffix
+--- input: http://example.com/{-suffix|/|foo}
+--- expected: { foo => ['$', '@'] }
+--- uri: http://example.com/%24/%40/
+
 === single join
 --- input: http://example.com/?{-join|&|foo}
 --- expected: { foo => 'x' }
@@ -105,10 +120,20 @@ __END__
 --- expected: { foo => '@' }
 --- uri: http://example.com/?foo=%40
 
+=== single unescaped join
+--- input: http://example.com/?{-join|&|foo}
+--- expected: { foo => '@' }
+--- uri: http://example.com/?foo=@
+
 === multiple escaped join
 --- input: http://example.com/?{-join|&|foo,bar,baz,quux}
 --- expected: { foo => ' ', bar => '@', baz => '', quux => undef }
 --- uri: http://example.com/?foo=%20&bar=%40&baz=
+
+=== multiple unescaped join
+--- input: http://example.com/?{-join|&|foo,bar,baz,quux}
+--- expected: { foo => '$', bar => '@', baz => '', quux => undef }
+--- uri: http://example.com/?foo=%24&bar=%40&baz=
 
 === multiple, omitted join
 --- input: http://example.com/?{-join|&|foo,bar,baz,quux}
@@ -135,10 +160,20 @@ __END__
 --- expected: { foo => ['@'] }
 --- uri: http://example.com/%40
 
+=== single unescaped list
+--- input: http://example.com/{-list|/|foo}
+--- expected: { foo => ['@'] }
+--- uri: http://example.com/@
+
 === multiple escaped list
 --- input: http://example.com/{-list|/|foo}
 --- expected: { foo => [' ', '@'] }
 --- uri: http://example.com/%20/%40
+
+=== multiple unescaped list
+--- input: http://example.com/{-list|/|foo}
+--- expected: { foo => ['$', '@'] }
+--- uri: http://example.com/$/@
 
 === empty value list
 --- input: http://example.com/{-list|/|foo}

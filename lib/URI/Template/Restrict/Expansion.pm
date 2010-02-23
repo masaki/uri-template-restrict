@@ -43,6 +43,13 @@ my (%RE, %PATTERN, %PROCESSOR, %EXTRACTOR);
     $RE{arg}        = '.*?';
     $RE{varname}    = '[a-zA-Z0-9][a-zA-Z0-9._\-]*';
     $RE{vardefault} = '(?:[a-zA-Z0-9\-._~]|(?:%[a-fA-F0-9]{2}))*';
+    $RE{varextract} = sub {
+        my %ex = map { $_ => undef } @_;
+        my $re = join '' =>
+            grep { !exists $ex{$_} }
+            ('!', '$', '&', q|'|, '(', ')', '*', '+', ',', ';', '=', ':', '@');
+        return '(?:[a-zA-Z0-9\-._~]|[' . $re . ']|(?:%[a-fA-F0-9]{2}))*';
+    };
     $RE{var}        = "$RE{varname}(?:=$RE{vardefault})?";
     $RE{vars}       = "$RE{var}(?:,$RE{var})*";
 }
@@ -83,31 +90,38 @@ sub new {
 }
 
 %PATTERN = (
-    fill   => $RE{vardefault},
+    fill   => $RE{varextract}->(),
     prefix => sub {
-        my $arg = quotemeta shift->arg;
-        return "(?:${arg}$RE{vardefault})*";
+        my $arg = shift->arg;
+        my $re  = $RE{varextract}->($arg);
+        $arg = quotemeta $arg;
+        return "(?:${arg}$re)*";
     },
     suffix => sub {
-        my $arg = quotemeta shift->arg;
-        return "(?:$RE{vardefault}${arg})*";
+        my $arg = shift->arg;
+        my $re  = $RE{varextract}->($arg);
+        $arg = quotemeta $arg;
+        return "(?:$re${arg})*";
     },
     list   => sub {
-        my $arg = quotemeta shift->arg;
-        return "(?:$RE{vardefault}(?:${arg}$RE{vardefault})*)*";
+        my $arg = shift->arg;
+        my $re  = $RE{varextract}->($arg);
+        $arg = quotemeta $arg;
+        return "(?:$re(?:${arg}$re)*)*";
     },
     join   => sub {
         my $self = shift;
         my $arg  = quotemeta $self->arg;
         my @vars = ref $self->vars eq 'ARRAY' ? @{ $self->vars } : ($self->vars);
         my @pattern;
+        my $re = $RE{varextract}->($self->arg, '=');
         for my $pair (@vars) {
             my $varname = $pair->name;
-            my $pattern = "${varname}=$RE{vardefault}";
+            my $pattern = "${varname}=$re";
             for my $rest (@vars) {
                 my $name = $rest->name;
                 next if $name eq $varname;
-                $pattern .= "(?:${arg}${name}=$RE{vardefault})?";
+                $pattern .= "(?:${arg}${name}=$re)?";
             }
             push @pattern, $pattern;
         }
