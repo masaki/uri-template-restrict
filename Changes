@@ -1,5 +1,8 @@
 Revision history for Perl extension URI::Template::Restrict
 
+0.05
+	- fixed wrong usage on synopsis (zigorou)
+
 0.04
         - extends vardefault matches chars on extract (zigorou)
 

@@ -11,7 +11,7 @@ use URI;
 use URI::Escape qw(uri_escape_utf8);
 use URI::Template::Restrict::Expansion;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 __PACKAGE__->mk_ro_accessors(qw'template segments');
 
@@ -105,7 +105,7 @@ URI::Template::Restrict - restricted URI Templates handler
     use URI::Template::Restrict;
 
     my $template = URI::Template::Restrict->new(
-        template => 'http://example.com/{foo}'
+        'http://example.com/{foo}'
     );
 
     my $uri = $template->process(foo => 'y');
