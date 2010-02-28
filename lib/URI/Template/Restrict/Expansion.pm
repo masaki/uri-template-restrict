@@ -6,13 +6,13 @@ use base 'Class::Accessor::Fast';
 use Carp qw(croak);
 use URI::Escape qw(uri_unescape);
 
-__PACKAGE__->mk_ro_accessors(qw'op arg vars');
+__PACKAGE__->mk_accessors(qw'op arg vars');
 
 {
     package # hide from PAUSE
         URI::Template::Restrict::Expansion::var;
     use base 'Class::Accessor::Fast';
-    __PACKAGE__->mk_ro_accessors(qw'name default');
+    __PACKAGE__->mk_accessors(qw'name default');
 }
 
 my (%RE, %PATTERN, %PROCESSOR, %EXTRACTOR);

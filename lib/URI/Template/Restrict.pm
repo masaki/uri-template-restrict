@@ -13,7 +13,7 @@ use URI::Template::Restrict::Expansion;
 
 our $VERSION = '0.05';
 
-__PACKAGE__->mk_ro_accessors(qw'template segments');
+__PACKAGE__->mk_accessors(qw'template segments');
 
 sub new {
     my ($class, $template) = @_;
