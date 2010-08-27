@@ -22,3 +22,7 @@ URI::Template::Restrict
 gregorio
 uritemplate
 arg
+uri
+neg
+op
+vars
