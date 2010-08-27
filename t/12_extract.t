@@ -105,45 +105,85 @@ __END__
 --- expected: { foo => ['$', '@'] }
 --- uri: http://example.com/%24/%40/
 
-=== single join
+=== single join on query part
 --- input: http://example.com/?{-join|&|foo}
 --- expected: { foo => 'x' }
 --- uri: http://example.com/?foo=x
 
-=== multiple join
+=== multiple join on query part
 --- input: http://example.com/?{-join|&|foo,bar,baz,quux}
 --- expected: { foo => 'x', bar => 'y', baz => '', quux => undef }
 --- uri: http://example.com/?foo=x&bar=y&baz=
 
-=== single escaped join
+=== single escaped join on query part
 --- input: http://example.com/?{-join|&|foo}
 --- expected: { foo => '@' }
 --- uri: http://example.com/?foo=%40
 
-=== single unescaped join
+=== single unescaped join on query part
 --- input: http://example.com/?{-join|&|foo}
 --- expected: { foo => '@' }
 --- uri: http://example.com/?foo=@
 
-=== multiple escaped join
+=== multiple escaped join on query part
 --- input: http://example.com/?{-join|&|foo,bar,baz,quux}
 --- expected: { foo => ' ', bar => '@', baz => '', quux => undef }
 --- uri: http://example.com/?foo=%20&bar=%40&baz=
 
-=== multiple unescaped join
+=== multiple unescaped join on query part
 --- input: http://example.com/?{-join|&|foo,bar,baz,quux}
 --- expected: { foo => '$', bar => '@', baz => '', quux => undef }
 --- uri: http://example.com/?foo=%24&bar=%40&baz=
 
-=== multiple, omitted join
+=== multiple, omitted join on query part
 --- input: http://example.com/?{-join|&|foo,bar,baz,quux}
 --- expected: { foo => undef, bar => '', baz => 'z', quux => undef }
 --- uri: http://example.com/?bar=&baz=z
 
-=== undefined join
+=== undefined join on query part
 --- input: http://example.com/?{-join|&|quux}
 --- expected: { quux => undef }
 --- uri: http://example.com/?
+
+=== single join on path part
+--- input: http://example.com/{-join|;|foo}
+--- expected: { foo => 'x' }
+--- uri: http://example.com/foo=x
+
+=== multiple join on path part
+--- input: http://example.com/{-join|;|foo,bar,baz,quux}
+--- expected: { foo => 'x', bar => 'y', baz => '', quux => undef }
+--- uri: http://example.com/foo=x;bar=y;baz=
+
+=== single escaped join on path part
+--- input: http://example.com/{-join|;|foo}
+--- expected: { foo => '@' }
+--- uri: http://example.com/foo=%40
+
+=== single unescaped join on path part
+--- input: http://example.com/{-join|;|foo}
+--- expected: { foo => '@' }
+--- uri: http://example.com/foo=@
+
+=== multiple escaped join on path part
+--- input: http://example.com/{-join|;|foo,bar,baz,quux}
+--- expected: { foo => ' ', bar => '@', baz => '', quux => undef }
+--- uri: http://example.com/foo=%20;bar=%40;baz=
+
+=== multiple unescaped join on path part
+--- input: http://example.com/{-join|;|foo,bar,baz,quux}
+--- expected: { foo => '$foo', bar => '@bar', baz => '', quux => undef }
+--- uri: http://example.com/foo=$foo;bar=@bar;baz=
+
+=== multiple, omitted join on path part
+--- input: http://example.com/{-join|;|foo,bar,baz,quux}
+--- expected: { foo => undef, bar => '', baz => 'z', quux => undef }
+--- uri: http://example.com/bar=;baz=z
+
+=== undefined join on path part
+--- input: http://example.com/{-join|;|quux}
+--- expected: { quux => undef }
+--- uri: http://example.com/
 
 === single list
 --- input: http://example.com/{-list|/|foo}
@@ -189,3 +229,8 @@ __END__
 --- input: http://example.com/{-list|/|foo}
 --- expected: { foo => undef }
 --- uri: http://example.com/
+
+=== bugs avatar api of mbga.jp OpenSocial platform
+--- input: http://example.com/avatar/{userId}/{groupId}/{-join|;|size,view,emotion,dimension,transparent,type,extension,motion,scene,appId}
+--- expected: { userId => '@me', groupId => '@self', size => 'large', view => undef, emotion => 'smile', dimension => undef, transparent => 'true', type => undef, extension => 'png', motion => undef, scene => undef, appId => '@app' }
+--- uri: http://example.com/avatar/@me/@self/size=large;transparent=true;appId=@app;extension=png;emotion=smile

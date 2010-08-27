@@ -115,17 +115,9 @@ sub new {
         my @vars = ref $self->vars eq 'ARRAY' ? @{ $self->vars } : ($self->vars);
         my @pattern;
         my $re = $RE{varextract}->($self->arg, '=');
-        for my $pair (@vars) {
-            my $varname = $pair->name;
-            my $pattern = "${varname}=$re";
-            for my $rest (@vars) {
-                my $name = $rest->name;
-                next if $name eq $varname;
-                $pattern .= "(?:${arg}${name}=$re)?";
-            }
-            push @pattern, $pattern;
-        }
-        return '(?:' . join('|', @pattern) . ')*';
+	my $names = join('|', map { $_->name } @vars);
+	my $n = $#vars;
+	return "(?:(?:(?:${names})=$re){0,1}(?:${arg}(?:${names})=$re){0,${n}})";
     },
 );
 
