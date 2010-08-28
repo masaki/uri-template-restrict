@@ -1,5 +1,8 @@
 Revision history for Perl extension URI::Template::Restrict
 
+0.06
+        - fixed join pattern (zigorou)
+
 0.05
         - fixed wrong usage on synopsis (zigorou)
         - replaced ro-accessors to rw-accessors (masaki)
